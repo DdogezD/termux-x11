@@ -89,6 +89,13 @@ E.g. <b>META</b> for <i>META key</i>, \n
     <string name="lorie_pref_filterOutWinkey_summary">Allows you to use Dex shortcuts while intercepting. Requires Accessibility service to work.</string>
     <string name="lorie_pref_enforceCharBasedInput">Enforce char based input</string>
     <string name="lorie_pref_enforceCharBasedInput_summary">Suppresses suggestions, predictive typing and CJK languages</string>
+    <string name="lorie_pref_filterInputDevices">Block spurious key events</string>
+    <string name="lorie_pref_filterInputDevices_summary">Select input devices whose keyboard events should be blocked</string>
+    <string name="lorie_pref_filterInputDevicesScreen">Block spurious key events</string>
+    <string name="lorie_pref_block_key_recording">Record last key event</string>
+    <string name="lorie_pref_block_key_recording_summary">Temporarily show the most recent key from each device to identify spurious input</string>
+    <string name="lorie_pref_block_devices_category">Input devices</string>
+    <string name="lorie_pref_block_last_key">Last: %s</string>
 
     <string name="lorie_pref_clipboardEnable">Clipboard sharing</string>
     <string name="lorie_pref_requestNotificationPermission">Request notification permission</string>

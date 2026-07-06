@@ -42,11 +42,13 @@ import androidx.appcompat.app.ActionBar;
 import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.preference.PreferenceDataStore;
+import androidx.preference.PreferenceCategory;
 import androidx.preference.PreferenceFragmentCompat;
 
 import androidx.preference.Preference.OnPreferenceChangeListener;
 import androidx.preference.PreferenceScreen;
 import androidx.preference.SeekBarPreference;
+import androidx.preference.SwitchPreferenceCompat;
 
 import android.provider.Settings;
 import android.text.method.LinkMovementMethod;
@@ -61,6 +63,7 @@ import android.widget.EditText;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import com.termux.x11.input.TouchInputHandler;
 import com.termux.x11.utils.KeyInterceptor;
 import com.termux.x11.utils.SamsungDexUtils;
 import com.termux.x11.utils.TermuxX11ExtraKeys;
@@ -246,6 +249,11 @@ public class LoriePreferences extends AppCompatActivity implements PreferenceFra
 
             setPreferencesFromResource(R.xml.preferences, root == null ? "main" : root);
 
+            if ("filterInputDevicesScreen".equals(root)) {
+                populateFilteredInputDevices();
+                return;
+            }
+
             int id;
             PreferenceScreen screen = getPreferenceScreen();
             if ((id = findId(screen.getKey())) != 0)
@@ -295,6 +303,60 @@ public class LoriePreferences extends AppCompatActivity implements PreferenceFra
             setNoActionOptionText(findPreference("volumeDownAction"), "android volume control");
             setNoActionOptionText(findPreference("volumeUpAction"), "android volume control");
             setNoActionOptionText(findPreference("mediaKeysAction"), "android media control");
+        }
+
+        private void populateFilteredInputDevices() {
+            int id;
+            PreferenceScreen screen = getPreferenceScreen();
+            if ((id = findId(screen.getKey())) != 0)
+                screen.setTitle(getResources().getString(id));
+
+            // Recording toggle at the top, separated from the device list
+            SwitchPreferenceCompat recording = new SwitchPreferenceCompat(getContext());
+            recording.setKey("block_key_recording");
+            recording.setDefaultValue(false);
+            if ((id = findId("block_key_recording")) != 0)
+                recording.setTitle(getResources().getString(id));
+            if ((id = findId("block_key_recording_summary")) != 0)
+                recording.setSummary(getResources().getString(id));
+            recording.setPreferenceDataStore(prefs);
+            recording.setOnPreferenceChangeListener((pr, v) -> {
+                boolean on = (Boolean) v;
+                TouchInputHandler.sRecordingEnabled = on;
+                if (!on) TouchInputHandler.clearLastKeyEvents();
+                return true;
+            });
+            screen.addPreference(recording);
+
+            PreferenceCategory deviceCategory = new PreferenceCategory(getContext());
+            if ((id = findId("block_devices_category")) != 0)
+                deviceCategory.setTitle(getResources().getString(id));
+            screen.addPreference(deviceCategory);
+
+            boolean recordingOn = prefs.getBoolean("block_key_recording", false);
+            int lastKeyFormatId = recordingOn ? findId("block_last_key") : 0;
+
+            for (int devId : InputDevice.getDeviceIds()) {
+                InputDevice d = InputDevice.getDevice(devId);
+                if (d == null || d.getName() == null) continue;
+                if (!d.supportsSource(InputDevice.SOURCE_KEYBOARD)) continue;
+                if (d.isVirtual()) continue;
+
+                String key = "block_key_" + devId;
+                SwitchPreferenceCompat sw = new SwitchPreferenceCompat(getContext());
+                sw.setKey(key);
+                sw.setDefaultValue(false);
+                sw.setTitle(d.getName());
+                sw.setPreferenceDataStore(prefs);
+                sw.setChecked(prefs.getBoolean(key, false));
+                if (recordingOn) {
+                    String last = TouchInputHandler.getLastKeyEvent(devId);
+                    if (last != null && lastKeyFormatId != 0)
+                        sw.setSummary(getResources().getString(lastKeyFormatId, last));
+                }
+                sw.setOnPreferenceChangeListener((pr, v) -> true);
+                screen.addPreference(sw);
+            }
         }
 
         private void setSummary(CharSequence key, int disabled) {

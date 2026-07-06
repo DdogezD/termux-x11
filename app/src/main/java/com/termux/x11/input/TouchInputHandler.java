@@ -42,7 +42,11 @@ import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
 import java.lang.reflect.InvocationTargetException;
 import java.util.Arrays;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.Map;
 import java.util.Objects;
+import java.util.Set;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.BiConsumer;
 
@@ -137,6 +141,9 @@ public class TouchInputHandler {
     private boolean mIsDragging;
     private static DisplayManager mDisplayManager;
     private static int mDisplayRotation;
+    static final Set<Integer> sFilteredKeyDeviceIds = new HashSet<>();
+    public static boolean sRecordingEnabled = false;
+    private static final Map<Integer, String> sLastKeyEventByDevice = new HashMap<>();
     private static final DisplayManager.DisplayListener mDisplayListener = new DisplayManager.DisplayListener() {
         @Override
         public void onDisplayAdded(int displayId) {
@@ -239,9 +246,27 @@ public class TouchInputHandler {
         this(activity, null, injector, false);
     }
 
+    public static void recordKeyEvent(int deviceId, KeyEvent e) {
+        if (deviceId < 0) return;
+        sLastKeyEventByDevice.put(deviceId, KeyEvent.keyCodeToString(e.getKeyCode()));
+    }
+
+    public static void clearLastKeyEvents() {
+        sLastKeyEventByDevice.clear();
+    }
+
+    public static String getLastKeyEvent(int deviceId) {
+        return sLastKeyEventByDevice.get(deviceId);
+    }
+
     static public void refreshInputDevices() {
         AtomicBoolean stylusAvailable = new AtomicBoolean(false);
         AtomicBoolean externalKeyboardAvailable = new AtomicBoolean(false);
+        sFilteredKeyDeviceIds.clear();
+
+        if (MainActivity.prefs != null)
+            sRecordingEnabled = MainActivity.prefs.getBoolean("block_key_recording", false);
+
         android.util.Log.d("DEVICES", "external keyboard connected " + stylusAvailable.get());
         Arrays.stream(InputDevice.getDeviceIds())
                 .mapToObj(InputDevice::getDevice)
@@ -258,6 +283,9 @@ public class TouchInputHandler {
 
                     if (device.supportsSource(InputDevice.SOURCE_KEYBOARD) && device.getKeyboardType() == InputDevice.KEYBOARD_TYPE_ALPHABETIC && isExternal(device))
                         externalKeyboardAvailable.set(true);
+
+                    if (MainActivity.prefs != null && MainActivity.prefs.getBoolean("block_key_" + device.getId(), false))
+                        sFilteredKeyDeviceIds.add(device.getId());
                 });
         android.util.Log.d("DEVICES", "requesting stylus " + stylusAvailable.get());
         android.util.Log.d("DEVICES", "external keyboard connected " + externalKeyboardAvailable.get());

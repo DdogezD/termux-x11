@@ -184,6 +184,13 @@ public final class InputEventSender {
             return true;
         }
 
+        if (TouchInputHandler.sRecordingEnabled)
+            TouchInputHandler.recordKeyEvent(e.getDeviceId(), e);
+
+        // Block key events from devices selected in "Block spurious key events" preferences
+        if (TouchInputHandler.sFilteredKeyDeviceIds.contains(e.getDeviceId()))
+            return true;
+
         // Events received from software keyboards generate TextEvent in two
         // cases:
         //   1. This is an ACTION_MULTIPLE event.
