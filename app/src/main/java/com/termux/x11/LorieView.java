@@ -491,7 +491,7 @@ public class LorieView extends SurfaceView implements InputStub {
 
             currentComposingText = reuse ? newText : null;
 
-            if (a.useTermuxEKBarBehaviour && a.mExtraKeys != null)
+            if (a.mExtraKeys != null)
                 a.mExtraKeys.unsetSpecialKeys();
             commitedText = true;
             return true;

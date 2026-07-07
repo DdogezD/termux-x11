@@ -88,7 +88,6 @@ public class MainActivity extends AppCompatActivity {
     private static boolean externalKeyboardConnected = false;
     private View.OnKeyListener mLorieKeyListener;
     private boolean filterOutWinKey = false;
-    boolean useTermuxEKBarBehaviour = false;
     private boolean isInPictureInPictureMode = false;
 
     public static Prefs prefs = null;
@@ -186,7 +185,7 @@ public class MainActivity extends AppCompatActivity {
             boolean result = mInputHandler.sendKeyEvent(e);
 
             // Do not steal dedicated buttons from a full external keyboard.
-            if (useTermuxEKBarBehaviour && mExtraKeys != null && (dev == null || dev.isVirtual()))
+            if (mExtraKeys != null && (dev == null || dev.isVirtual()))
                 mExtraKeys.unsetSpecialKeys();
             return result;
         };
@@ -589,7 +588,6 @@ public class MainActivity extends AppCompatActivity {
         else if (checkSelfPermission(WRITE_SECURE_SETTINGS) == PERMISSION_GRANTED)
             KeyInterceptor.shutdown(true);
 
-        useTermuxEKBarBehaviour = prefs.useTermuxEKBarBehaviour.get();
         showIMEWhileExternalConnected = prefs.showIMEWhileExternalConnected.get();
 
         findViewById(R.id.mouse_buttons).setVisibility(prefs.showMouseHelper.get() && "1".equals(prefs.touchMode.get()) && LorieView.connected() ? View.VISIBLE : View.GONE);
