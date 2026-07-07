@@ -785,6 +785,11 @@ public class LorieView extends SurfaceView implements InputStub {
                 keyReleaseHandler.sendEmptyMessageDelayed(event.getKeyCode(), 50);
         }
 
+        // Volume keys should never go through the IME; they get lost when
+        // the soft keyboard is visible. Route them directly to handleKey().
+        if (event.getKeyCode() == KeyEvent.KEYCODE_VOLUME_UP || event.getKeyCode() == KeyEvent.KEYCODE_VOLUME_DOWN)
+            return MainActivity.getInstance().handleKey(event);
+
         if (hardwareKbdScancodesWorkaround)
             return false;
 
