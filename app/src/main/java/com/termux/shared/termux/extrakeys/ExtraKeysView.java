@@ -480,10 +480,24 @@ public final class ExtraKeysView extends GridLayout {
         }
 
         public void run() {
-            // Toggle active and lock state
-            mState.setIsLocked(!mState.isActive);
-            mState.setIsActive(!mState.isActive);
+            // Increment first so onAnyExtraKeyButtonClick returns early in performClick() path
             mLongPressCount++;
+            // Trigger key event via click before toggling state.
+            // performExtraKeyButtonHapticFeedback schedules the actual key down/up
+            // with a 100ms delay, reading the state after we've set it below.
+            for (Button b : mState.buttons)
+                b.performClick();
+
+            // Activate and lock if inactive or active-but-unlocked; deactivate if locked
+            if (!mState.isActive || !mState.isLocked) {
+                mState.setIsLocked(true);
+                mState.setIsActive(true);
+            } else {
+                mState.setIsLocked(false);
+                mState.setIsActive(false);
+            }
+            for (Button b : mState.buttons)
+                b.performHapticFeedback(HapticFeedbackConstants.LONG_PRESS);
         }
     }
 
@@ -552,6 +566,14 @@ public final class ExtraKeysView extends GridLayout {
             state.setIsActive(false);
 
         return true;
+    }
+
+    /**
+     * Check whether a {@link SpecialButton} registered in {@link #mSpecialButtons} is locked.
+     */
+    public boolean isSpecialButtonLocked(SpecialButton specialButton) {
+        SpecialButtonState state = mSpecialButtons.get(specialButton);
+        return state != null && state.isLocked;
     }
 
     public Button createSpecialButton(String buttonKey, boolean needUpdate) {

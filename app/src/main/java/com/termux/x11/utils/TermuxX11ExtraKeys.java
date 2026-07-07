@@ -85,6 +85,7 @@ public class TermuxX11ExtraKeys implements ExtraKeysView.IExtraKeysView {
             }
         } else {
             onLorieExtraKeyButtonClick(view, buttonInfo.key, false, false, false, false, false);
+            unsetSpecialKeys();
         }
     }
 
@@ -125,13 +126,18 @@ public class TermuxX11ExtraKeys implements ExtraKeysView.IExtraKeysView {
         if (mExtraKeysView == null)
             return;
 
-        if (Boolean.TRUE.equals(mExtraKeysView.readSpecialButton(SpecialButton.CTRL, true)))
+        // Locked keys stay pressed; only release unlocked active ones
+        if (Boolean.TRUE.equals(mExtraKeysView.readSpecialButton(SpecialButton.CTRL, true))
+                && !mExtraKeysView.isSpecialButtonLocked(SpecialButton.CTRL))
             mActivity.getLorieView().sendKeyEvent(0, KeyEvent.KEYCODE_CTRL_LEFT, false);
-        if (Boolean.TRUE.equals(mExtraKeysView.readSpecialButton(SpecialButton.ALT, true)))
+        if (Boolean.TRUE.equals(mExtraKeysView.readSpecialButton(SpecialButton.ALT, true))
+                && !mExtraKeysView.isSpecialButtonLocked(SpecialButton.ALT))
             mActivity.getLorieView().sendKeyEvent(0, KeyEvent.KEYCODE_ALT_LEFT, false);
-        if (Boolean.TRUE.equals(mExtraKeysView.readSpecialButton(SpecialButton.SHIFT, true)))
+        if (Boolean.TRUE.equals(mExtraKeysView.readSpecialButton(SpecialButton.SHIFT, true))
+                && !mExtraKeysView.isSpecialButtonLocked(SpecialButton.SHIFT))
             mActivity.getLorieView().sendKeyEvent(0, KeyEvent.KEYCODE_SHIFT_LEFT, false);
-        if (Boolean.TRUE.equals(mExtraKeysView.readSpecialButton(SpecialButton.META, true)))
+        if (Boolean.TRUE.equals(mExtraKeysView.readSpecialButton(SpecialButton.META, true))
+                && !mExtraKeysView.isSpecialButtonLocked(SpecialButton.META))
             mActivity.getLorieView().sendKeyEvent(0, KeyEvent.KEYCODE_META_LEFT, false);
     }
 
