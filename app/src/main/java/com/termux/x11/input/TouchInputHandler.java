@@ -17,6 +17,7 @@ import android.graphics.Matrix;
 import android.graphics.PointF;
 import android.hardware.display.DisplayManager;
 import android.hardware.input.InputManager;
+import android.media.AudioManager;
 import android.os.Handler;
 import android.os.Build;
 import android.util.DisplayMetrics;
@@ -826,25 +827,35 @@ public class TouchInputHandler {
             mInjector.releaseStuckModifiers(e.getMetaState());
 
         if (isMediaSessionKey(k)) {
-            if (mediaKeysAction == noAction)
-                return false;
-
+            if (mediaKeysAction == noAction) {
+                AudioManager am = (AudioManager) mActivity.getSystemService(Context.AUDIO_SERVICE);
+                am.dispatchMediaKeyEvent(e);
+                return true;
+            }
             mediaKeysAction.accept(k, e.getAction() == KeyEvent.ACTION_DOWN);
             return true;
         }
 
         if (k == KEYCODE_VOLUME_DOWN) {
-            if (volumeDownAction == noAction)
-                return false;
-
+            if (volumeDownAction == noAction) {
+                if (e.getAction() == KeyEvent.ACTION_DOWN) {
+                    AudioManager am = (AudioManager) mActivity.getSystemService(Context.AUDIO_SERVICE);
+                    am.adjustStreamVolume(AudioManager.STREAM_MUSIC, AudioManager.ADJUST_LOWER, AudioManager.FLAG_SHOW_UI);
+                }
+                return true;
+            }
             volumeDownAction.accept(k, e.getAction() == KeyEvent.ACTION_DOWN);
             return true;
         }
 
         if (k == KEYCODE_VOLUME_UP) {
-            if (volumeUpAction == noAction)
-                return false;
-
+            if (volumeUpAction == noAction) {
+                if (e.getAction() == KeyEvent.ACTION_DOWN) {
+                    AudioManager am = (AudioManager) mActivity.getSystemService(Context.AUDIO_SERVICE);
+                    am.adjustStreamVolume(AudioManager.STREAM_MUSIC, AudioManager.ADJUST_RAISE, AudioManager.FLAG_SHOW_UI);
+                }
+                return true;
+            }
             volumeUpAction.accept(k, e.getAction() == KeyEvent.ACTION_DOWN);
             return true;
         }
