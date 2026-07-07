@@ -111,7 +111,9 @@ public final class ExtraKeysView extends GridLayout {
     /** Defines the default value for {@link #mButtonTextColor} */
     public static final int DEFAULT_BUTTON_TEXT_COLOR = 0xFFFFFFFF;
     /** Defines the default value for {@link #mButtonActiveTextColor} */
-    public static final int DEFAULT_BUTTON_ACTIVE_TEXT_COLOR = 0xFF80DEEA;
+    public static final int DEFAULT_BUTTON_ACTIVE_TEXT_COLOR = 0xFFFF0000;
+    /** Defines the default value for {@link #mButtonLockedTextColor} */
+    public static final int DEFAULT_BUTTON_LOCKED_TEXT_COLOR = 0xFF80DEEA;
     /** Defines the default value for {@link #mButtonBackgroundColor} */
     public static final int DEFAULT_BUTTON_BACKGROUND_COLOR = 0x00000000;
     /** Defines the default value for {@link #mButtonActiveBackgroundColor} */
@@ -159,6 +161,9 @@ public final class ExtraKeysView extends GridLayout {
     /** The text color for the extra keys button when its active.
      * Defaults to {@link #DEFAULT_BUTTON_ACTIVE_TEXT_COLOR}. */
     private int mButtonActiveTextColor;
+    /** The text color for the extra keys button when its locked.
+     * Defaults to {@link #DEFAULT_BUTTON_LOCKED_TEXT_COLOR}. */
+    private int mButtonLockedTextColor;
     /** The background color for the extra keys button. Defaults to {@link #DEFAULT_BUTTON_BACKGROUND_COLOR}. */
     private int mButtonBackgroundColor;
     /** The background color for the extra keys button when its active. Defaults to
@@ -200,7 +205,7 @@ public final class ExtraKeysView extends GridLayout {
         setRepetitiveKeys(ExtraKeysConstants.PRIMARY_REPETITIVE_KEYS);
         setSpecialButtons(getDefaultSpecialButtons(this));
 
-        setButtonColors(DEFAULT_BUTTON_TEXT_COLOR, DEFAULT_BUTTON_ACTIVE_TEXT_COLOR, DEFAULT_BUTTON_BACKGROUND_COLOR, DEFAULT_BUTTON_ACTIVE_BACKGROUND_COLOR);
+        setButtonColors(DEFAULT_BUTTON_TEXT_COLOR, DEFAULT_BUTTON_ACTIVE_TEXT_COLOR, DEFAULT_BUTTON_LOCKED_TEXT_COLOR, DEFAULT_BUTTON_BACKGROUND_COLOR, DEFAULT_BUTTON_ACTIVE_BACKGROUND_COLOR);
 
         setLongPressTimeout(ViewConfiguration.getLongPressTimeout());
         setLongPressRepeatDelay(DEFAULT_LONG_PRESS_REPEAT_DELAY);
@@ -229,12 +234,14 @@ public final class ExtraKeysView extends GridLayout {
      *
      * @param buttonTextColor The value for {@link #mButtonTextColor}.
      * @param buttonActiveTextColor The value for {@link #mButtonActiveTextColor}.
+     * @param buttonLockedTextColor The value for {@link #mButtonLockedTextColor}.
      * @param buttonBackgroundColor The value for {@link #mButtonBackgroundColor}.
      * @param buttonActiveBackgroundColor The value for {@link #mButtonActiveBackgroundColor}.
      */
-    public void setButtonColors(int buttonTextColor, int buttonActiveTextColor, int buttonBackgroundColor, int buttonActiveBackgroundColor) {
+    public void setButtonColors(int buttonTextColor, int buttonActiveTextColor, int buttonLockedTextColor, int buttonBackgroundColor, int buttonActiveBackgroundColor) {
         mButtonTextColor = buttonTextColor;
         mButtonActiveTextColor = buttonActiveTextColor;
+        mButtonLockedTextColor = buttonLockedTextColor;
         mButtonBackgroundColor = buttonBackgroundColor;
         mButtonActiveBackgroundColor = buttonActiveBackgroundColor;
     }
@@ -248,6 +255,11 @@ public final class ExtraKeysView extends GridLayout {
     /** Get {@link #mButtonActiveTextColor}. */
     public int getButtonActiveTextColor() {
         return mButtonActiveTextColor;
+    }
+
+    /** Get {@link #mButtonLockedTextColor}. */
+    public int getButtonLockedTextColor() {
+        return mButtonLockedTextColor;
     }
 
     /** Set {@link #mLongPressTimeout}. */
@@ -325,6 +337,8 @@ public final class ExtraKeysView extends GridLayout {
                 button.setTextColor(mButtonTextColor);
                 button.setAllCaps(true);
                 button.setPadding(0, 0, 0, 0);
+                if (buttonInfo.popup != null || mRepetitiveKeys.contains(buttonInfo.key) || isSpecialButton(buttonInfo))
+                    button.setTag("has_long_press");
 
                 button.setOnClickListener(view -> {
                     performExtraKeyButtonHapticFeedback(view, buttonInfo, button);
@@ -345,6 +359,7 @@ public final class ExtraKeysView extends GridLayout {
                                 if (mPopupWindow == null && event.getY() < 0) {
                                     stopScheduledExecutors();
                                     view.setBackgroundColor(mButtonBackgroundColor);
+                                    view.performHapticFeedback(HapticFeedbackConstants.LONG_PRESS);
                                     showPopup(view, buttonInfo.popup);
                                 }
                                 if (mPopupWindow != null && event.getY() > 0) {
@@ -357,6 +372,8 @@ public final class ExtraKeysView extends GridLayout {
                         case MotionEvent.ACTION_CANCEL:
                             view.setBackgroundColor(mButtonBackgroundColor);
                             stopScheduledExecutors();
+                            if ("has_long_press".equals(view.getTag()))
+                                restoreButtonColor((Button) view, buttonInfo);
                             return true;
 
                         case MotionEvent.ACTION_UP:
@@ -374,6 +391,8 @@ public final class ExtraKeysView extends GridLayout {
                                     view.performClick();
                                 }
                             }
+                            if ("has_long_press".equals(view.getTag()))
+                                restoreButtonColor((Button) view, buttonInfo);
                             return true;
 
                         default:
@@ -443,6 +462,12 @@ public final class ExtraKeysView extends GridLayout {
             // Currently, only one (last) repeat key can run at a time. Old ones are stopped.
             mScheduledExecutor = Executors.newSingleThreadScheduledExecutor();
             mScheduledExecutor.scheduleWithFixedDelay(() -> {
+                if (mLongPressCount == 0) {
+                    view.post(() -> {
+                        view.performHapticFeedback(HapticFeedbackConstants.LONG_PRESS);
+                        ((Button) view).setTextColor(mButtonActiveTextColor);
+                    });
+                }
                 mLongPressCount++;
                 onExtraKeyButtonClick(view, buttonInfo, button);
             }, mLongPressTimeout, mLongPressRepeatDelay, TimeUnit.MILLISECONDS);
@@ -576,12 +601,24 @@ public final class ExtraKeysView extends GridLayout {
         return state != null && state.isLocked;
     }
 
+    private void restoreButtonColor(Button b, ExtraKeyButton info) {
+        if (isSpecialButton(info)) {
+            SpecialButtonState state = mSpecialButtons.get(SpecialButton.valueOf(info.key));
+            if (state != null && state.isActive)
+                b.setTextColor(state.isLocked ? mButtonLockedTextColor : mButtonActiveTextColor);
+            else
+                b.setTextColor(mButtonTextColor);
+        } else {
+            b.setTextColor(mButtonTextColor);
+        }
+    }
+
     public Button createSpecialButton(String buttonKey, boolean needUpdate) {
         SpecialButtonState state = mSpecialButtons.get(SpecialButton.valueOf(buttonKey));
         if (state == null) return null;
         state.setIsCreated(true);
         Button button = new Button(getContext(), null, android.R.attr.buttonBarButtonStyle);
-        button.setTextColor(state.isActive ? mButtonActiveTextColor : mButtonTextColor);
+        button.setTextColor(state.isActive ? (state.isLocked ? mButtonLockedTextColor : mButtonActiveTextColor) : mButtonTextColor);
         if (needUpdate) {
             state.buttons.add(button);
         }
