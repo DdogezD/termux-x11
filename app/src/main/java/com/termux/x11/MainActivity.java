@@ -721,6 +721,7 @@ public class MainActivity extends AppCompatActivity {
             inputMethodManager.hideSoftInputFromWindow(getWindow().getDecorView().getRootView().getWindowToken(), 0);
 
         orientation = newConfig.orientation;
+        onWindowFocusChanged(hasWindowFocus());
         setTerminalToolbarView();
     }
 
